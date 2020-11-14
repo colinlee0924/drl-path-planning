@@ -96,7 +96,7 @@ class DeepQNetwork_cnn(nn.Module):
         __reset_param_impl__(self)
 
     def cnn_out_dim(self, input_dims):
-        return self.cnn(T.zeros(1, 2, *input_dims)
+        return self.cnn(T.zeros(1, 1, *input_dims)
                        ).flatten().shape[0]
 
 
