@@ -1,0 +1,7 @@
+*.pyc
+**/__pycache__/
+**/runs/
+**/result/
+**/model/
+
+**/.DS_Store
