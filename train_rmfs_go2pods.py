@@ -150,11 +150,11 @@ with SummaryWriter() as writer:
         if episode % 1000 == 0 and episode != 0:
             # torch.save(agent.q_eval.state_dict(), "model/waitPenalty-2car-wall-test-QevalNet-pooling-{}.pkl".format(episode))
             torch.save(
-                agent.q_eval.state_dict(), "model/1Channel-fcn-1car-wall-randomGoal-{}.pkl".format(episode)
+                agent.q_eval.state_dict(), "model/2Channel-fcn-1car-wall-randomGoal-{}.pkl".format(episode)
                 )
 
     env.destroy()
-    torch.save(agent.q_eval.state_dict(), "model/1Channel-fcn-1car-wall-randomGoal-final.pkl")
+    torch.save(agent.q_eval.state_dict(), "model/2Channel-fcn-1car-wall-randomGoal-final.pkl")
 
     # Result
     dfReward   = pd.DataFrame(lstReward)
@@ -170,16 +170,16 @@ with SummaryWriter() as writer:
     dfBoomWall.columns = ["BoomWall"]
 
     result = pd.concat([dfReward, dfPerform, dfGotcha, dfBoomCar, dfBoomWall], axis = 1)
-    result.to_csv("result/1Channel-fcn-1car-wall-randomGoal-result-{}.csv".format(77))
+    result.to_csv("result/2Channel-fcn-1car-wall-randomGoal-result-{}.csv".format(77))
 
     # Loss
     dfLossHis = pd.DataFrame([agent.loss_his[idx].data.item() for idx in range(len(agent.loss_his))])
-    dfLossHis.to_csv("result/1Channel-fcn-1car-wall-randomGoal-loss-his-{}.csv".format(77))
+    dfLossHis.to_csv("result/2Channel-fcn-1car-wall-randomGoal-loss-his-{}.csv".format(77))
 
     # Statistic
     lst_success = [n_gotcha, n_boomCar, n_boomWall]
     df_success = pd.DataFrame(lst_success)
-    df_success.to_csv("result/1Channel-fcn-1car-wall-randomGoal-result-success-{}.csv".format(77))
+    df_success.to_csv("result/2Channel-fcn-1car-wall-randomGoal-result-success-{}.csv".format(77))
 
     writer.flush()
 
