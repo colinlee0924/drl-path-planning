@@ -25,9 +25,8 @@ from torch import nn
 from tensorboardX import SummaryWriter
 
 # from dqn_cnn_model_oneChannel_fcn_5Actions import Agent
-from dqn_rmfs_go2pods import Agent
-# from env_rmfs_go2pods import Maze
-from go2pods_2ws import Maze
+from dqn_rmfs_go2pods_2ws import Agent
+from env_go2pods import Maze
 
 seed = 999
 random.seed(seed)
