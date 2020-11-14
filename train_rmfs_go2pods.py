@@ -105,7 +105,7 @@ with SummaryWriter() as writer:
             total_reward += reward
             num_tookStep += 1
 
-            threshold = (500 if episode >= 300 else 1500)
+            threshold = (200 if episode >= 300 else 500)
             if num_tookStep >= threshold and not done:
                 done = True
             else:
