@@ -215,13 +215,13 @@ class Agent:
             if config.clip:
                 nn.utils.clip_grad_norm_(self.q_eval.parameters(), config.clip)
 
-            tot_norm = 0; cntr = 0
-            for parm in self.q_eval.parameters():
-                grad_norm = parm.grad.data.norm().item()
-                tot_norm += grad_norm
-                cntr += 1
-                print("[{}] ".format(cntr), grad_norm)
-            print("avg. : ", tot_norm / cntr)
+            # tot_norm = 0; cntr = 0
+            # for parm in self.q_eval.parameters():
+            #     grad_norm = parm.grad.data.norm().item()
+            #     tot_norm += grad_norm
+            #     cntr += 1
+            #     print("[{}] ".format(cntr), grad_norm)
+            # print("avg. : ", tot_norm / cntr)
 
 
             self.q_eval.optimizer.step()
