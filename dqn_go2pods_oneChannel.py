@@ -29,7 +29,7 @@ class DeepQNetwork_cnn(nn.Module):
         self.actions = np.arange(n_actions)
 
         # convolution layers
-        self.conv_1  = nn.Conv2d(1, 32, kernel_size=3, stride=1)
+        self.conv_1  = nn.Conv2d(1, 32, kernel_size=5, stride=1)
         self.conv_2  = nn.Conv2d(32, 64, kernel_size=3, stride=1)
         # self.conv_3  = nn.Conv2d(64, 64, kernel_size=2, stride=1)
         self.bn_32   = nn.BatchNorm2d(32)
