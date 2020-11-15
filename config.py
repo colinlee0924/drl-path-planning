@@ -1,13 +1,12 @@
 
 UNIT = 20   # pixels
-MAP_WIDTH = 23 #22 # 5
+MAP_WIDTH  = 23 #22 # 5
 MAP_HEIGHT = 23 #11 # 5
-n_agv =  1
+n_agv  = 1
 n_task = 1
 
-EPISODE_MAX = 100000
-PRETRAINED = None #"3Channel-fcn-1car-wall-randomGoal-17000.pkl" # None
-
+EPISODE_MAX = 50000
+PRETRAINED  = None #"3Channel-fcn-1car-wall-randomGoal-17000.pkl" # None
 
 lr           = 1e-3
 gamma        = 0.9
