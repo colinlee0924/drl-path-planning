@@ -514,11 +514,12 @@ class Maze(tk.Tk, object):
         if agent_id == (self.agv_n - 1):
             self.agent_map[agent_pos_y][agent_pos_x] = 1.
             self.visited_map[agent_pos_y][agent_pos_x] = 0.05
-        if agent_id in self.loaded_agv:
-            self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
         # Position of other agents
         else:
             self.others_map[agent_pos_y][agent_pos_x] = 0.25
+
+        if agent_id in self.loaded_agv:
+            self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
 
         x_direction = agent_pos_y - task_pos_x
         y_direction = agent_pos_y - task_pos_y

@@ -311,8 +311,13 @@ class Maze(tk.Tk, object):
 
         x_direction = agent_pos_y - task_pos_x
         y_direction = agent_pos_y - task_pos_y
-        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
-                                   (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
+        self.state_fcn = np.array([agent_pos_x / config.MAP_WIDTH, 
+                                   agent_pos_y / config.MAP_HEIGHT, 
+                                   task_pos_x  / config.MAP_WIDTH,
+                                   task_pos_y  / config.MAP_HEIGHT,
+                                   x_direction / config.MAP_WIDTH,
+                                   y_direction / config.MAP_HEIGHT,
+                                   (x_direction**2 + y_direction**2)**(1 / 2.0)]) / (config.MAP_HEIGHT + config.MAP_WIDTH) #,
                                    # self.task_priority[self.agv_n-1][0])
 
         return np.array([self.state, self.state_fcn])
@@ -516,16 +521,22 @@ class Maze(tk.Tk, object):
         if agent_id == (self.agv_n - 1):
             self.agent_map[agent_pos_y][agent_pos_x] = 1.
             self.visited_map[agent_pos_y][agent_pos_x] = 0.05
-        if agent_id in self.loaded_agv:
-            self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
         # Position of other agents
         else:
             self.others_map[agent_pos_y][agent_pos_x] = 0.25
+        # Position and Priority info of loaded task
+        if agent_id in self.loaded_agv:
+            self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
 
         x_direction = agent_pos_y - task_pos_x
         y_direction = agent_pos_y - task_pos_y
-        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
-                                   (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
+        self.state_fcn = np.array([agent_pos_x / config.MAP_WIDTH, 
+                                   agent_pos_y / config.MAP_HEIGHT, 
+                                   task_pos_x  / config.MAP_WIDTH,
+                                   task_pos_y  / config.MAP_HEIGHT,
+                                   x_direction / config.MAP_WIDTH,
+                                   y_direction / config.MAP_HEIGHT,
+                                   (x_direction**2 + y_direction**2)**(1 / 2.0)]) / (config.MAP_HEIGHT + config.MAP_WIDTH) #,
                                    # self.task_priority[self.agv_n-1][0]])
 
     def step(self, action):
