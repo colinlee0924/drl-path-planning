@@ -26,7 +26,8 @@ from tensorboardX import SummaryWriter
 
 # from dqn_cnn_model_oneChannel_fcn_5Actions import Agent
 # from dqn_rmfs_go2pods_2ws import Agent
-from dqn_go2pods_oneChannel import Agent
+# from dqn_go2pods_oneChannel import Agent
+from dqn_fcn_model import Agent
 from env_go2pods_oneChannel import Maze
 
 seed = 999

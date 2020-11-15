@@ -1,7 +1,7 @@
 
 UNIT = 20   # pixels
-MAP_WIDTH  = 23 #22 # 5
-MAP_HEIGHT = 23 #11 # 5
+MAP_WIDTH  = 22 # 5
+MAP_HEIGHT = 11 # 5
 n_agv  = 1
 n_task = 1
 
