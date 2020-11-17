@@ -311,8 +311,8 @@ class Maze(tk.Tk, object):
 
         x_direction = agent_pos_x - task_pos_x
         y_direction = agent_pos_y - task_pos_y
-        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
-                                   (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
+        xy_distance = (x_direction**2 + y_direction**2)**(1 / 2.0)
+        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction, xy_distance])#,
                                    # self.task_priority[self.agv_n-1][0])
 
         return np.array([self.state, self.state_fcn])
@@ -526,9 +526,11 @@ class Maze(tk.Tk, object):
 
         x_direction = agent_pos_x - task_pos_x
         y_direction = agent_pos_y - task_pos_y
-        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
-                                   (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
+        xy_distance = (x_direction**2 + y_direction**2)**(1 / 2.0)
+        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction, xy_distance])#,
                                    # self.task_priority[self.agv_n-1][0]])
+        if learning_mode:
+            self.reward -= xy_distance
 
     def step(self, action):
         self.last_action = {}
