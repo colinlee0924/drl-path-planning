@@ -138,7 +138,7 @@ class Agent:
             action  = T.argmax(actions).item()
             ####################################
             # print("*********************")
-            print(actions)
+            # print(actions)
             # print("*********************")
             ####################################
         else:
