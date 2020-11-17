@@ -309,14 +309,14 @@ class Maze(tk.Tk, object):
         if np.array(self.oval).sum() == 0:
             self.done = True
 
-        x_direction = agent_pos_y - task_pos_x
+        x_direction = agent_pos_x - task_pos_x
         y_direction = agent_pos_y - task_pos_y
         self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
                                    (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
                                    # self.task_priority[self.agv_n-1][0])
 
-        # return np.array([self.state, self.state_fcn])
-        return np.array(self.state_fcn)
+        return np.array([self.state, self.state_fcn])
+        # return np.array(self.state_fcn)
 
     def move_agent(self, agent, action, learning_mode=True):
         agent_pos   = self.canvas.coords(agent)
@@ -524,7 +524,7 @@ class Maze(tk.Tk, object):
         if agent_id in self.loaded_agv:
             self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
 
-        x_direction = agent_pos_y - task_pos_x
+        x_direction = agent_pos_x - task_pos_x
         y_direction = agent_pos_y - task_pos_y
         self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
                                    (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
@@ -565,8 +565,8 @@ class Maze(tk.Tk, object):
         # print(self.get_state())
         # print(self.state_fcn.shape)
 
-        # return np.array([self.state, self.state_fcn]), self.reward, self.done
-        return np.array(self.state_fcn), self.reward, self.done
+        return np.array([self.state, self.state_fcn]), self.reward, self.done
+        # return np.array(self.state_fcn), self.reward, self.done
 
 
     def render(self, motion_speed=None):
