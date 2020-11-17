@@ -531,7 +531,6 @@ class Maze(tk.Tk, object):
                                    # self.task_priority[self.agv_n-1][0]])
         if learning_mode:
             self.reward -= xy_distance
-            print("--- ", xy_distance)
 
     def step(self, action):
         self.last_action = {}
