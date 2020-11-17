@@ -50,16 +50,6 @@ class Agent:
                                          fc1_dims=256,
                                          fc2_dims=32).to(self.device)
 
-        self.q_eval = DeepQNetwork(self.lr,
-                                   n_actions=n_actions, input_dims=input_dims,
-                                   fc1_dims=256,
-                                   fc2_dims=32).to(self.device)
-
-        self.q_target = DeepQNetwork(self.lr,
-                                     n_actions=n_actions,input_dims=input_dims,
-                                     fc1_dims=256,
-                                     fc2_dims=32).to(self.device)
-
         self.q_target.load_state_dict(self.q_eval.state_dict())
         self.q_target.eval()
 
