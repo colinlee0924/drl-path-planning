@@ -15,7 +15,7 @@ else:
     import tkinter as tk
 
 import random
-import config
+import config_modified as config
 
 UNIT = 20   # pixels
 MAZE_H = config.MAP_HEIGHT #9#32  # grid height
@@ -28,8 +28,8 @@ random.seed(999)
 class Maze(tk.Tk, object):
     def __init__(self, n_agv, n_task, maze_height=MAZE_H, maze_width=MAZE_W):
         super(Maze, self).__init__()
-        # self.action_space = ['up', 'down', 'left', 'right', 'wait']
-        self.action_space = ['u', 'd', 'l', 'r']
+        self.action_space = ['up', 'down', 'left', 'right', 'wait']
+        # self.action_space = ['u', 'd', 'l', 'r']
         self.n_actions = len(self.action_space)
         # self.n_features = 2
         self.task_n = n_task #1#4 #10
@@ -64,7 +64,7 @@ class Maze(tk.Tk, object):
             x0, y0, x1, y1 = 0, rows, self.maze_width * UNIT, rows
             self.canvas.create_line(x0, y0, x1, y1)
 
-        import rmfs_layout as my_layout
+        import rmfs_layout   as my_layout
 
         self.walls, self.wall_pos = my_layout.walls, my_layout.wall_pos
         self.froms, self.from_pos = my_layout.froms, my_layout.from_pos
@@ -78,18 +78,22 @@ class Maze(tk.Tk, object):
         self.flip_zone   , self.flip_zone_pos   = my_layout.flip_zone   , my_layout.flip_zone_pos
 
         # create tasks and agvs
-        self.agent, self.__walls__ = [], []
         self.oval , self.rect      = [], []
+        self.agent, self.__the_walls__ = [], []
+        self.__walls__ = defaultdict(list)
 
         self.__pods__     , self.__picking_pts__ = [], []
         self.__entrances__, self.__exits__       = [], []
         self.__queues__   , self.__flip_zones__  = [], []
         self.finished_agv = set()
+        self.loaded_agv   = set()
 
         ## walls
         for wall in self.walls:
-            self.__walls__.append(self.canvas.create_rectangle(wall[0], wall[1],
-                                                               wall[2], wall[3],
+            self.__the_walls__.append(self.canvas.create_rectangle(wall[0],
+                                                                   wall[1],
+                                                                   wall[2],
+                                                                   wall[3],
                                                                fill='black'))
         ## entrance
         for entrance in self.entrances:
@@ -125,34 +129,46 @@ class Maze(tk.Tk, object):
                                                               pod[2], pod[3],
                                                               fill='deep sky blue'))
 
-        self.froms   , self.tos      = [], []
-        self.from_pos, self.to_pos   = [], []
+        # self.froms   , self.tos      = [], []
+        # self.from_pos, self.to_pos   = [], []
+        self.froms   , self.tos      = [], defaultdict(list)
+        self.from_pos, self.to_pos   = [], defaultdict(list)
+        self.need_pods     = defaultdict(list)
+        self.task_priority = defaultdict(list)
 
         self.request_ws, self.request_ws_pos = [], []
         self.request_ws_idx                  = []
         origin = np.array([10, 10])
         # to create tasks(find pods)
-        for _ in range(config.n_task):
+        for num_task in range(config.n_task):
+            belong_to_agv = num_task % self.agv_n
             the_pod_idx = np.random.choice(range(len(self.pod_pos)))
             the_pod     = self.pod_pos[the_pod_idx]
-            while the_pod in self.to_pos:
+            while the_pod in self.to_pos.values():
                 the_pod_idx = np.random.choice(range(len(self.pod_pos)))
                 the_pod     = self.pod_pos[the_pod_idx]
             x, y   = the_pod[0], the_pod[1]
             center = origin + np.array([UNIT * x, UNIT * y])
-            self.tos.append([center[0] - 7, center[1] - 7,
-                             center[0] + 7, center[1] + 7])
-            self.to_pos.append([x, y])
+            self.tos[belong_to_agv].append([center[0] - 7, center[1] - 7,
+                                            center[0] + 7, center[1] + 7])
+            self.to_pos[belong_to_agv].append([x, y])
 
             the_ws_idx = np.random.choice(range(2))
             the_ws     = self.entrance_pos[the_ws_idx]
             x, y       = the_ws[0], the_ws[1]
             center     = origin + np.array([UNIT * x, UNIT * y])
-            self.request_ws.append([center[0] - 7, center[1] - 7,
-                                    center[0] + 7, center[1] + 7])
-            self.request_ws_pos.append([x, y])
+            # self.request_ws.append([center[0] - 7, center[1] - 7,
+            #                         center[0] + 7, center[1] + 7])
+            # self.request_ws_pos.append([x, y])
             self.request_ws_idx.append(the_ws_idx)
+            self.tos[belong_to_agv].append([center[0] - 7, center[1] - 7,
+                                            center[0] + 7, center[1] + 7])
+            self.to_pos[belong_to_agv].append([x, y])
+            self.need_pods[belong_to_agv].append(self.__pods__[the_pod_idx])
 
+            the_priority = np.random.choice(range(self.task_n))
+            the_priority = the_priority / self.task_n
+            self.task_priority[belong_to_agv].append(the_priority)
 
         # to create agvs
         # the_agv = [[6, 7]]
@@ -171,11 +187,14 @@ class Maze(tk.Tk, object):
 
         ## agvs(rect) n tasks(oval)
         for agv_id in range(self.agv_n):
-            self.oval.append(self.canvas.create_oval(self.tos[0][0], self.tos[0][1],
-                                                     self.tos[0][2], self.tos[0][3],
-                                                     fill='yellow'))
+            color = ('yellow' if agv_id==(self.agv_n-1) else 'orange')
+            self.oval.append(self.canvas.create_oval(self.tos[agv_id][0][0],
+                                                     self.tos[agv_id][0][1],
+                                                     self.tos[agv_id][0][2],
+                                                     self.tos[agv_id][0][3],
+                                                     fill=color))
 
-            if agv_id ==  (self.agv_n - 1):
+            if agv_id == (self.agv_n - 1):
                 self.agent = self.canvas.create_rectangle(self.froms[0][0], self.froms[0][1],
                                                           self.froms[0][2], self.froms[0][3],
                                                           fill='red')
@@ -184,13 +203,8 @@ class Maze(tk.Tk, object):
                 self.rect.append(self.canvas.create_rectangle(self.froms[0][0], self.froms[0][1],
                                                               self.froms[0][2], self.froms[0][3],
                                                               fill='green'))
-            # print('---------')
-            # print(self.tos)
-            # print(self.tos[1:])
-            # print('---------')
-            # print()
-            self.tos   = self.tos[1:]
-            self.froms = self.froms[1:]
+            self.tos[agv_id] = self.tos[agv_id][1:]
+            self.froms       = self.froms[1:]
 
         # pack all
         self.canvas.pack()
@@ -198,21 +212,25 @@ class Maze(tk.Tk, object):
 
     def reset(self, episode=0):
         np.random.seed(self.seed)
-        if episode % 3 == 0:
+        if episode % 30 == 0:
             self.seed += 1
         self.done = False
         self.canvas.destroy()
         self._build_maze()
         self.gotcha, self.boomCar, self.boomWall = 0, 0, 0
         self.n_wait = 0
+        self.visited_node_lst = []
+        self.dict_reward_status = defaultdict(list)
 
         self.agent_map   = np.zeros((self.maze_height, self.maze_width))
         self.task_map    = np.zeros((self.maze_height, self.maze_width))
         self.others_map  = np.zeros((self.maze_height, self.maze_width))
-        self.obs_map     = np.zeros((self.maze_height, self.maze_width))
-        self.pods_map    = np.zeros((self.maze_height, self.maze_width))
         self.loaded_map  = np.zeros((self.maze_height, self.maze_width))
         self.visited_map = np.zeros((self.maze_height, self.maze_width))
+        self.obs_map_og  = np.zeros((self.maze_height, self.maze_width))
+        self.pods_map_og = np.zeros((self.maze_height, self.maze_width))
+        self.pods_map    = np.zeros((self.agv_n, self.maze_height, self.maze_width))
+        self.obs_map     = np.zeros((self.agv_n, self.maze_height, self.maze_width))
 
         return self.get_state()
 
@@ -221,13 +239,14 @@ class Maze(tk.Tk, object):
         next_coords = self.canvas.coords(self.rect[agent_id])
         agent_pos_x = int((next_coords[0] - 3) / UNIT)
         agent_pos_y = int((next_coords[1] - 3) / UNIT)
-        self.agent_map[agent_pos_y][agent_pos_x] = 1.
-
+        self.agent_map[agent_pos_y][agent_pos_x] = config.rep_agent #1.
+        if agent_id in self.loaded_agv:
+            self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
         # Position of task
         task_coords = self.canvas.coords(self.oval[agent_id])
         task_pos_x = int((task_coords[0] - 3) / UNIT)
         task_pos_y = int((task_coords[1] - 3) / UNIT)
-        self.task_map[task_pos_y][task_pos_x] = 0.75
+        self.task_map[task_pos_y][task_pos_x] = config.rep_task #0.75
 
         # Position of other agents
         for others in self.rect:
@@ -237,44 +256,47 @@ class Maze(tk.Tk, object):
             others_pos_x = int((others_coords[0] - 3) / UNIT)
             others_pos_y = int((others_coords[1] - 3) / UNIT)
             # self.others_map[others_pos_y][others_pos_x] = 1.
-            self.others_map[others_pos_y][others_pos_x] = 0.25
+            self.others_map[others_pos_y][others_pos_x] = config.rep_other #0.25
 
         # Position of walls
-        for walls in self.__walls__:
+        for walls in self.__the_walls__:
             walls_coords = self.canvas.coords(walls)
             walls_pos_x = int((walls_coords[0] - 3) / UNIT)
             walls_pos_y = int((walls_coords[1] - 3) / UNIT)
-            self.obs_map[walls_pos_y][walls_pos_x] = 0.5
+            self.obs_map_og[walls_pos_y][walls_pos_x] = config.rep_obsta #0.5
 
         for walls in self.__picking_pts__: #workstation might be the obs, too!
             walls_coords = self.canvas.coords(walls)
             walls_pos_x = int((walls_coords[0] - 3) / UNIT)
             walls_pos_y = int((walls_coords[1] - 3) / UNIT)
-            self.obs_map[walls_pos_y][walls_pos_x] = 0.5
+            self.obs_map_og[walls_pos_y][walls_pos_x] = config.rep_obsta #0.5
         for walls in self.__flip_zones__: #workstation might be the obs, too!
             walls_coords = self.canvas.coords(walls)
             walls_pos_x = int((walls_coords[0] - 3) / UNIT)
             walls_pos_y = int((walls_coords[1] - 3) / UNIT)
-            self.obs_map[walls_pos_y][walls_pos_x] = 0.5
+            self.obs_map_og[walls_pos_y][walls_pos_x] = config.rep_obsta #0.5
         for walls in self.__queues__: #workstation might be the obs, too!
             walls_coords = self.canvas.coords(walls)
             walls_pos_x = int((walls_coords[0] - 3) / UNIT)
             walls_pos_y = int((walls_coords[1] - 3) / UNIT)
-            self.obs_map[walls_pos_y][walls_pos_x] = 0.5
+            self.obs_map_og[walls_pos_y][walls_pos_x] = config.rep_obsta # 0.5
         for walls in self.__exits__: #workstation might be the obs, too!
             walls_coords = self.canvas.coords(walls)
             walls_pos_x = int((walls_coords[0] - 3) / UNIT)
             walls_pos_y = int((walls_coords[1] - 3) / UNIT)
-            self.obs_map[walls_pos_y][walls_pos_x] = 0.5
-        self.__walls__ = self.__walls__ + self.__queues__ +\
-                         self.__picking_pts__ + self.__flip_zones__+\
-                         self.__exits__
+            self.obs_map_og[walls_pos_y][walls_pos_x] = config.rep_obsta #0.5
+        self.__the_walls__ = self.__the_walls__ + self.__queues__ +\
+                             self.__picking_pts__ + self.__flip_zones__+\
+                             self.__exits__
+        for agv_id in range(self.agv_n):
+            self.__walls__[agv_id] = deepcopy(self.__the_walls__)
+            self.obs_map[agv_id]   = np.array(self.obs_map_og)
 
         for the_pod in self.__pods__:
             pod_coords = self.canvas.coords(the_pod)
             pod_pos_x = int((pod_coords[0] - 3) / UNIT)
             pod_pos_y = int((pod_coords[1] - 3) / UNIT)
-            self.pods_map[pod_pos_y][pod_pos_x] = 0.5
+            self.pods_map_og[pod_pos_y][pod_pos_x] = config.rep_obsta #0.5
 
         self.agent_map_og  = np.array(self.agent_map)
         self.others_map_og = np.array(self.others_map)
@@ -282,7 +304,15 @@ class Maze(tk.Tk, object):
         self.loaded_map_og = np.array(self.loaded_map)
         # self.visited_map_og = np.zeros((self.maze_width, self.maze_height))
 
-        self.state[0] = self.agent_map_og + self.others_map_og + self.task_map_og + self.obs_map
+        # self.state[0] = self.agent_map_og + self.others_map_og + self.task_map_og + self.obs_map[-1] + self.pods_map[-1]
+        self.state[0] = self.agent_map + self.others_map  + self.visited_map +\
+                        self.task_map  + self.obs_map[-1] + self.pods_map[-1]
+        #################################
+        #################################
+        # self.state[0] = np.ones((self.maze_width, self.maze_height)) - self.state[0]
+        self.state[0] = np.ones((self.maze_height, self.maze_width)) - self.state[0]
+        #################################
+        #################################
         # self.state[1] = self.loaded_map_og
 
         # terminal condition
@@ -291,9 +321,13 @@ class Maze(tk.Tk, object):
 
         x_direction = agent_pos_y - task_pos_x
         y_direction = agent_pos_y - task_pos_y
-        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction, (x_direction**2 + y_direction**2)**(1 / 2.0)])
+        self.state_fcn = np.array([agent_pos_x, agent_pos_y, 
+                                   task_pos_x , task_pos_y ,
+                                   x_direction, y_direction,
+                                   (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
+                                   # self.task_priority[self.agv_n-1][0])
 
-        return np.array([self.state, self.state_fcn])
+        return np.array([self.state, self.state_fcn], dtype=object)
 
     def move_agent(self, agent, action, learning_mode=True):
         agent_pos   = self.canvas.coords(agent)
@@ -379,20 +413,33 @@ class Maze(tk.Tk, object):
             task_coords = deepcopy(self.canvas.coords(self.oval[agent_id]))
 
         #### Reward function ###
+        reward_crash, reward_goal, reward_step  = 0, 0, config.step_penalty
+        reward_oscil, reward_wait, reward_guide = 0, 0, 0
+
+        _next_coords = self.canvas.coords(agent)
+        _agent_pos_x = int((_next_coords[0] - 3) / UNIT)
+        _agent_pos_y = int((_next_coords[1] - 3) / UNIT)
+
+        oscillation  = (self.visited_map[_agent_pos_y][_agent_pos_x] == config.rep_visited )
         reach_target = (next_coords == self.canvas.coords(self.oval[agent_id]))
+
         if not reach_target:
             # if learning_mode:
             if True:
                 # bump into others
                 other_avgs_position = [self.canvas.coords(agvs) for agvs in self.rect if agvs != self.rect[agent_id]]
-                walls_location = [self.canvas.coords(walls) for walls in self.__walls__]
+                walls_location = [self.canvas.coords(walls) for walls in self.__walls__[agent_id]]
 
                 if next_coords in other_avgs_position:
                     if learning_mode:
-                        self.reward = config.crash_penalty #-1.
+                        # self.reward = config.crash_penalty #-1.
+                        # self.reward = config.crash_penalty + \
+                        #               config.step_penalty
+                        reward_crash = config.crash_penalty
 
                         if self.testing:
-                            self.done = False #True
+                            # self.done = False #True
+                            self.done = config.terminal_wall
                             self.boomCar = 1
                         else:
                             self.done = False
@@ -403,8 +450,13 @@ class Maze(tk.Tk, object):
                 # bump into walls(obstacle)
                 elif next_coords in walls_location:
                     if learning_mode:
-                        self.reward = config.crash_penalty #-10000. #00
-                        self.done = False #True
+                        # self.reward = config.crash_penalty #-10000. #00
+                        # self.reward = config.crash_penalty + \
+                        #               config.step_penalty
+                        reward_crash = config.crash_penalty
+
+                        # self.done = False #True
+                        self.done = config.terminal_wall
                         self.boomWall = 1
                     if self.done == False:
                         self.canvas.move(agent, ((-1) * self.last_action[agent][0]), ((-1) * self.last_action[agent][1])) # back 2 last pos
@@ -412,43 +464,93 @@ class Maze(tk.Tk, object):
                 # bump into the wall(layout)
                 elif self.penalty:
                     if learning_mode:
-                        self.reward = config.crash_penalty #-10000.
-                        self.done = False
+                        # self.reward = config.crash_penalty #-10000.
+                        # self.reward = config.crash_penalty + \
+                        #               config.step_penalty
+                        reward_crash = config.crash_penalty
+
+                        # self.done = False
+                        self.done = config.terminal_wall
                     if self.done == False:
                         self.canvas.move(agent, ((-1) * self.last_action[agent][0]), ((-1) * self.last_action[agent][1])) # back 2 last pos
 
                 # wait penalty
                 elif self.n_wait:
-                    self.reward = config.wait_penalty * self.n_wait #-0.1 * self.n_wait#-10#-0.1
-                    self.done = False
+                    # self.reward = config.wait_penalty * self.n_wait #-0.1 * self.n_wait#-10#-0.1
+                    #####################
+                    #####################
+                    # self.reward = self.reward + config.step_penalty
+                    #####################
+                    #####################
+                    reward_wait = config.wait_penalty * self.n_wait 
 
-                else:
-                    self.reward = config.step_penalty
-                    self.done = False
+                    self.done   = False
+
+                elif oscillation:
+                    # self.reward = config.step_penalty + config.oscil_penalty
+                    reward_oscil = config.oscil_penalty
+                    self.done   = False
+
+                # else:
+                #     self.reward = config.step_penalty
+                #     self.done   = False
 
         # Got the task
         else:
             if learning_mode == True:
-                self.reward = config.goal_reward #100. #1. #00
+                # self.reward = config.goal_reward #100. #1. #00
+                reward_goal = config.goal_reward
                 self.gotcha = 1
                 # print(""); print("********** Good Job ***********"); print()
 
             # if agent_id < self.agv_n - 1:
             self.canvas.delete(self.oval[agent_id])
 
-            if len(self.tos) != 0:
-                self.oval[agent_id] = self.canvas.create_oval(self.tos[0][0], self.tos[0][1],
-                                                              self.tos[0][2], self.tos[0][3],
-                                                              fill='yellow')
-                self.tos   = self.tos[1:]
-                self.froms = self.froms[1:]
+            n_task_remain = len(self.tos[agent_id])
+            if n_task_remain != 0:
+                color = ('yellow' if agent_id==(self.agv_n-1) else 'orange')
+                self.oval[agent_id] = self.canvas.create_oval(
+                                                   self.tos[agent_id][0][0],
+                                                   self.tos[agent_id][0][1],
+                                                   self.tos[agent_id][0][2],
+                                                   self.tos[agent_id][0][3],
+                                                   fill=color)
+                self.tos[agent_id] = self.tos[agent_id][1:]
+                self.froms         = self.froms[1:]
+                self.pods_map[agent_id] = np.array(self.pods_map_og)
+                if n_task_remain % 2:
+                    finished_pod = self.need_pods[agent_id].pop(0)
+                    self.canvas.delete(finished_pod)
+                    # print('### check check ###')
+                    # print(self.__walls__[agent_id])
+                    # print(self.pods_map[agent_id])
+                    self.__walls__[agent_id] += self.__pods__
+                    self.obs_map[agent_id]   += self.pods_map[agent_id]
+                    self.loaded_agv.add(agent_id)
+                    if learning_mode:
+                        self.done = True
+                else:
+                    self.finished_agv.add(agent_id)
+                    self.loaded_agv.remove(agent_id)
+                    self.canvas.move(self.rect[agent_id], 60, 0)
+                    self.canvas.move(self.rect[agent_id], 0, 40)
+                    self.task_priority[agent_id] = self.task_priority[agent_id][1:]
             else:
-                self.oval[agent_id] = 0
                 self.finished_agv.add(agent_id)
+                self.loaded_agv.remove(agent_id)
+                self.canvas.move(self.rect[agent_id], 60, 0)
+                self.canvas.move(self.rect[agent_id], 0, 40)
+                self.task_priority[agent_id] = self.task_priority[agent_id][1:]
+                self.oval[agent_id] = 0
+                self.task_priority[agent_id] = [0]
 
             # terminal condition
             if np.array(self.oval).sum() == 0:
                 self.done = True
+
+        # reward caculateion
+        self.reward = reward_step  + reward_crash + reward_wait +\
+                      reward_oscil + reward_goal  + reward_guide
 
         #### Next state ###
         next_coords = self.canvas.coords(agent)
@@ -461,24 +563,39 @@ class Maze(tk.Tk, object):
 
         # Position of task
         if learning_mode:
-            self.task_map[task_pos_y][task_pos_x] = 0.75
+            self.task_map[task_pos_y][task_pos_x] = config.rep_task # 0.75
         # Position of learning agent
+        # print(agent_id)
         if agent_id == (self.agv_n - 1):
-            self.agent_map[agent_pos_y][agent_pos_x] = 1.
-            self.visited_map[agent_pos_y][agent_pos_x] = 0.05
+            self.agent_map[agent_pos_y][agent_pos_x] = config.rep_agent #1.
+            if len(self.visited_node_lst) >= config.visited_threshold:
+                node_to_forget = self.visited_node_lst.pop(0)
+                
+                if node_to_forget not in self.visited_node_lst:
+                    self.visited_map[node_to_forget[1]][node_to_forget[0]] = 0.
+                
+            self.visited_map[agent_pos_y][agent_pos_x] = config.rep_visited # 0.05
+            self.visited_node_lst.append([agent_pos_x, agent_pos_y])
         # Position of other agents
         else:
-            self.others_map[agent_pos_y][agent_pos_x] = 0.25
+            self.others_map[agent_pos_y][agent_pos_x] = config.rep_other # 0.25
+
+        if agent_id in self.loaded_agv:
+            self.loaded_map[agent_pos_y][agent_pos_x] = self.task_priority[agent_id][0]
 
         x_direction = agent_pos_y - task_pos_x
         y_direction = agent_pos_y - task_pos_y
-        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction, (x_direction**2 + y_direction**2)**(1 / 2.0)])
+        self.state_fcn = np.array([agent_pos_x, agent_pos_y, task_pos_x, task_pos_y, x_direction, y_direction,
+                                   (x_direction**2 + y_direction**2)**(1 / 2.0)])#,
+                                   # self.task_priority[self.agv_n-1][0]])
 
     def step(self, action):
         self.last_action = {}
         self.agent_map  = np.zeros((self.maze_height, self.maze_width))
         self.others_map = np.zeros((self.maze_height, self.maze_width))
         self.task_map   = np.zeros((self.maze_height, self.maze_width))
+        self.loaded_map = np.zeros((self.maze_height, self.maze_width))
+        self.pods_map   = np.zeros((self.agv_n, self.maze_height, self.maze_width))
         self.step_counter += 1
 
         learning_agent = self.rect[self.agv_n - 1]
@@ -496,16 +613,26 @@ class Maze(tk.Tk, object):
                 self.find_task(self.rect[agent_id] , agent_id, learning_mode=False)
 
         # self.state[0] = self.agent_map_og + self.others_map_og + self.task_map_og + self.obs_map
-        self.state[0] = self.agent_map + self.others_map + self.task_map + self.obs_map
+        self.state[0] = self.agent_map + self.others_map  + self.visited_map +\
+                        self.task_map  + self.obs_map[-1] + self.pods_map[-1]
+        ################################
+        ################################
+        self.state[0] = np.ones((self.maze_height, self.maze_width)) - self.state[0]
+        ################################
+        ################################
+        # self.state[1] = np.array(self.loaded_map)
 
         # print("")
         # print("================= New state ===================")
         # print(self.state[0])
+        # print(self.visited_map)
         # print("")
         # print(self.reward, self.done)
         # print(self.get_state())
+        # print(self.state_fcn.shape)
 
-        return np.array([self.state, self.state_fcn]), self.reward, self.done
+        return np.array([self.state, self.state_fcn], dtype=object), self.reward, self.done
+        # return self.get_state(), self.reward, self.done
 
 
     def render(self, motion_speed=None):
@@ -539,7 +666,7 @@ def run(slow_motion):
             b1.pack()
             env.render(slow_motion)
 
-            action = np.random.randint(4)
+            action = np.random.randint(5)
             state_, reward, done = env.step(action)
             print(state)
             print(action, reward, done)
